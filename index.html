@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="かんばる">
+<meta name="theme-color" content="#2f6f5e">
+<title>かぞくのかんばる</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  html, body { margin: 0; height: 100%; background: #2f6f5e; overflow: hidden; }
+  #app { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); bottom: 0; width: 100%; height: calc(100% - env(safe-area-inset-top)); border: 0; background: #f5f3ee; }
+  #splash { position: fixed; inset: 0; background: #2f6f5e; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, "Hiragino Sans", sans-serif; z-index: 2; transition: opacity .4s; }
+  #splash img { width: 120px; height: 120px; border-radius: 28px; box-shadow: 0 6px 20px rgba(0,0,0,.25); animation: bob 1.4s ease-in-out infinite; }
+  #splash p { margin-top: 18px; font-size: 16px; }
+  #splash a { color: #ffe9a8; margin-top: 10px; font-size: 14px; display: none; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+</style>
+</head>
+<body>
+<div id="splash">
+  <img src="apple-touch-icon.png" alt="">
+  <p>よみこみ中…</p>
+  <a id="fallback" href="#">開かないときはこちら</a>
+</div>
+<iframe id="app" title="かぞくのかんばる" allow="clipboard-write"></iframe>
+<script>
+  // ▼ ここに、Apps Scriptの「ウェブアプリのURL」（…/exec で終わるもの）を貼り付けてください
+  var APP_URL = 'https://script.google.com/macros/s/AKfycbyRDznVWTNjXXsV81w-t_tV_nL-qTW2PZGrqm2LOp9RUFvBavxZC0V42DmgC-uPrsYIaA/exec';
+
+  var frame = document.getElementById('app');
+  var splash = document.getElementById('splash');
+  var fallback = document.getElementById('fallback');
+  fallback.href = APP_URL;
+  frame.onload = function () {
+    splash.style.opacity = '0';
+    setTimeout(function () { splash.style.display = 'none'; }, 400);
+  };
+  frame.src = APP_URL;
+  // 15秒たっても開かないときは、直接開くリンクを出す
+  setTimeout(function () { fallback.style.display = 'block'; }, 15000);
+</script>
+</body>
+</html>
