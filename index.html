@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -12,38 +12,899 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <style>
-  html, body { margin: 0; height: 100%; background: #2f6f5e; overflow: hidden; }
-  #app { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); bottom: 0; width: 100%; height: calc(100% - env(safe-area-inset-top)); border: 0; background: #f5f3ee; }
-  #splash { position: fixed; inset: 0; background: #2f6f5e; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, "Hiragino Sans", sans-serif; z-index: 2; transition: opacity .4s; }
-  #splash img { width: 120px; height: 120px; border-radius: 28px; box-shadow: 0 6px 20px rgba(0,0,0,.25); animation: bob 1.4s ease-in-out infinite; }
-  #splash p { margin-top: 18px; font-size: 16px; }
-  #splash a { color: #ffe9a8; margin-top: 10px; font-size: 14px; display: none; }
-  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; background: #f5f3ee; color: #333; padding-bottom: 76px; }
+  header { position: sticky; top: 0; z-index: 5; background: #2f6f5e; color: #fff; padding: calc(22px + env(safe-area-inset-top)) 12px 10px; }
+  html { background: #2f6f5e; } body { min-height: 100vh; }
+  .hrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .navbtn { background: rgba(255,255,255,.2); color: #fff; border: 0; border-radius: 8px; font-size: 18px; padding: 6px 14px; }
+  .htitle { font-size: 16px; font-weight: bold; text-align: center; }
+  .hsub { text-align: center; margin-top: 2px; }
+  .hsub button { background: rgba(255,255,255,.2); color: #fff; border: 0; border-radius: 6px; font-size: 12px; padding: 3px 8px; }
+  .me { position: absolute; left: 10px; top: calc(4px + env(safe-area-inset-top)); font-size: 11px; opacity: .85; background: none; border: 0; color: #fff; }
+  .tabs { display: flex; gap: 4px; margin: 10px -12px -10px; padding: 0 12px; overflow-x: auto; }
+  .tabs button { flex: 1; min-width: 70px; border: 0; border-radius: 10px 10px 0 0; padding: 9px 6px; font-size: 15px; background: rgba(255,255,255,.25); color: #fff; }
+  .tabs button.active { background: #f5f3ee; color: #2f6f5e; font-weight: bold; }
+  main { max-width: 760px; margin: 0 auto; padding: 12px; }
+  .card { background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .card h3 { margin: 0 0 8px; font-size: 16px; color: #2f6f5e; }
+  .fam { background: #fff8e6; border: 1px dashed #e0b84c; }
+  .goal { width: 100%; font-size: 17px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+  .goal:focus, textarea:focus { outline: 2px solid #2f6f5e; border-color: transparent; }
+  textarea { width: 100%; font-size: 15px; padding: 8px; border: 1px solid #ccc; border-radius: 8px; min-height: 56px; font-family: inherit; resize: vertical; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+  .day { text-align: center; }
+  .day .dl { font-size: 12px; color: #777; }
+  .day.today .dl { color: #2f6f5e; font-weight: bold; }
+  .day.sat .dl { color: #3b6fb6; } .day.sun .dl { color: #c0392b; }
+  .cell { width: 100%; aspect-ratio: 1 / 1; max-height: 56px; font-size: 24px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; padding: 0; color: #333; transition: transform .1s; }
+  .cell:active { transform: scale(.9); }
+  .day.today .cell { border: 2px solid #2f6f5e; }
+  .cell.m1 { background: #e3f3ea; color: #1e7a4c; } .cell.m2 { background: #fff5dc; color: #b07b00; } .cell.m3 { background: #fbe7e5; color: #b8392b; }
+  .btn { border: 1px solid #2f6f5e; color: #2f6f5e; background: #fff; border-radius: 10px; padding: 9px 14px; font-size: 14px; }
+  .btn.primary { background: #2f6f5e; color: #fff; }
+  .btn.big { width: 100%; font-size: 17px; padding: 14px; font-weight: bold; }
+  .btn.ai { background: linear-gradient(135deg, #7b5cff, #ff6fb1); color: #fff; border: 0; }
+  .btn:disabled { opacity: .5; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .hint { font-size: 12px; color: #888; margin: 4px 0 10px; }
+  .rate { font-size: 30px; font-weight: bold; color: #2f6f5e; }
+  .pill { display: inline-block; background: #eef6f2; color: #2f6f5e; border-radius: 999px; padding: 3px 10px; font-size: 13px; margin: 2px; }
+  .pill.fire { background: #fff0e0; color: #c25a00; }
+  .stamps button { font-size: 22px; background: #f3f3f3; border: 2px solid transparent; border-radius: 12px; padding: 4px 8px; }
+  .stamps button.on { border-color: #ff6fb1; background: #ffe8f3; animation: pop .4s; }
+  .bar { height: 14px; background: #eee; border-radius: 7px; overflow: hidden; margin: 3px 0 8px; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, #6cc19a, #2f6f5e); width: 0; transition: width 1s ease-out; border-radius: 7px; }
+  .barlabel { display: flex; justify-content: space-between; font-size: 13px; }
+  .award { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+  .award .ic { font-size: 30px; }
+  .ai-card { border-radius: 16px; padding: 14px; margin-bottom: 12px; background: #fff; box-shadow: 0 2px 8px rgba(123,92,255,.15); border: 2px solid #efe9ff; opacity: 0; animation: fadeUp .6s forwards; }
+  .ai-card .stamp { font-size: 46px; display: inline-block; animation: spinIn .8s both; }
+  .ai-card .ttl { display: inline-block; background: linear-gradient(135deg, #7b5cff, #ff6fb1); color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 13px; font-weight: bold; margin-left: 6px; vertical-align: middle; }
+  .ai-card .who { font-weight: bold; font-size: 17px; }
+  .ai-card p { margin: 8px 0; line-height: 1.7; }
+  .ai-card .sub { background: #f8f6ff; border-radius: 10px; padding: 8px 10px; font-size: 14px; margin-top: 6px; }
+  .ai-fam { background: linear-gradient(135deg, #fff3fa, #f1edff); }
+  .ai-fam .catch { font-size: 20px; font-weight: bold; color: #7b5cff; text-align: center; animation: pop .8s; }
+  .thinking { position: fixed; inset: 0; background: rgba(255,255,255,.92); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; color: #555; }
+  .thinking .robot { font-size: 72px; animation: bounce 1s infinite; }
+  .thinking .dots span { animation: blink 1.4s infinite; font-size: 30px; } .thinking .dots span:nth-child(2) { animation-delay: .2s; } .thinking .dots span:nth-child(3) { animation-delay: .4s; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 40; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal .box { background: #fff; border-radius: 16px; padding: 20px; max-width: 360px; width: 100%; text-align: center; }
+  .modal .box button { margin: 4px; }
+  .badges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+  .badge { padding: 8px 2px; border-radius: 12px; background: #f6f6f6; font-size: 11px; color: #999; }
+  .badge .e { font-size: 30px; filter: grayscale(1); opacity: .35; display: block; }
+  .badge.got { background: #fff6dd; color: #8a6200; } .badge.got .e { filter: none; opacity: 1; }
+  .progress { height: 26px; background: #eee; border-radius: 13px; overflow: hidden; position: relative; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, #ffd34d, #ff8a3d); width: 0; transition: width 1.2s ease-out; }
+  .progress span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px; border-bottom: 1px solid #f0f0f0; font-size: 15px; }
+  .list-item:active { background: #f7f7f7; }
+  .sugg { padding: 8px; border: 1px solid #e6e0ff; border-radius: 10px; margin: 6px 0; }
+  .bottom { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ddd; display: flex; z-index: 10; padding-bottom: env(safe-area-inset-bottom); }
+  .bottom button { flex: 1; border: 0; background: none; padding: 7px 0 9px; font-size: 11px; color: #888; }
+  .bottom button .i { display: block; font-size: 22px; }
+  .bottom button.active { color: #2f6f5e; font-weight: bold; }
+  .status { position: fixed; right: 10px; bottom: 80px; background: #333; color: #fff; padding: 6px 12px; border-radius: 16px; font-size: 13px; opacity: 0; transition: opacity .3s; z-index: 60; pointer-events: none; }
+  .status.show { opacity: .85; } .status.err { background: #c0392b; opacity: 1; }
+  .loading { text-align: center; color: #888; padding: 40px 0; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mini td { padding: 4px 2px; border-bottom: 1px solid #f2f2f2; text-align: center; }
+  table.mini td.g { text-align: left; }
+  #pinbox { max-width: 320px; margin: 80px auto; text-align: center; }
+  #pinbox input { font-size: 22px; padding: 10px; width: 100%; text-align: center; border-radius: 8px; border: 1px solid #ccc; margin: 12px 0; }
+  @keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+  @keyframes spinIn { 0% { transform: scale(0) rotate(-200deg); } 70% { transform: scale(1.3) rotate(15deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  @keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
 </style>
 </head>
 <body>
-<div id="splash">
-  <img src="apple-touch-icon.png" alt="">
-  <p>よみこみ中…</p>
-  <a id="fallback" href="#">開かないときはこちら</a>
+<div id="pinbox" style="display:none">
+  <p>合言葉を入れてください</p>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off">
+  <button class="btn primary" id="pinok">OK</button>
+  <p id="pinerr" style="color:#c0392b"></p>
 </div>
-<iframe id="app" title="かぞくのがんばる" allow="clipboard-write"></iframe>
-<script>
-  // ▼ ここに、Apps Scriptの「ウェブアプリのURL」（…/exec で終わるもの）を貼り付けてください
-  var APP_URL = 'https://script.google.com/macros/s/AKfycbyRDznVWTNjXXsV81w-t_tV_nL-qTW2PZGrqm2LOp9RUFvBavxZC0V42DmgC-uPrsYIaA/exec';
+<div id="app" style="display:none">
+  <header id="header"></header>
+  <main id="main"><div class="loading">読み込み中…</div></main>
+  <nav class="bottom" id="bottom"></nav>
+</div>
+<div class="status" id="status"></div>
 
-  var frame = document.getElementById('app');
-  var splash = document.getElementById('splash');
-  var fallback = document.getElementById('fallback');
-  fallback.href = APP_URL;
-  frame.onload = function () {
-    splash.style.opacity = '0';
-    setTimeout(function () { splash.style.display = 'none'; }, 400);
+<script>
+// ================= 基本 =================
+var MARKS = ['', '◎', '△', '✕'];
+var POINT = { '◎': 2, '△': 1, '✕': 0 };   // 達成率の計算
+var REWARD_PT = { '◎': 10, '△': 5, '✕': 0 }; // ごほうびポイント
+var BADGES = [
+  { days: 3, e: '🔥', name: '3日れんぞく' }, { days: 7, e: '🌟', name: '1週間れんぞく' },
+  { days: 14, e: '💎', name: '2週間れんぞく' }, { days: 30, e: '👑', name: '30日れんぞく' }
+];
+var SCREENS = [
+  { id: 'rec', i: '✏️', t: 'きろく' }, { id: 'week', i: '📊', t: '週ふりかえり' },
+  { id: 'month', i: '🏆', t: '月ふりかえり' }, { id: 'archive', i: '📚', t: 'アーカイブ' }, { id: 'reward', i: '⭐', t: 'ごほうび' }
+];
+var S = { pin: '', me: '', members: [], goalCount: 5, days: [], stampList: [], family: 'みんな', aiEnabled: false,
+  rec: {}, fam: {}, refl: {}, stamps: [], rewards: [], screen: 'rec', member: '', week: '', month: '', charts: [] };
+
+function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+// ▼ ここに、Apps Scriptの「ウェブアプリのURL」（…/exec で終わるもの）を貼り付けてください
+var APP_URL = 'https://script.google.com/macros/s/AKfycbyRDznVWTNjXXsV81w-t_tV_nL-qTW2PZGrqm2LOp9RUFvBavxZC0V42DmgC-uPrsYIaA/exec';
+
+// GASの中で開いたときは google.script.run、GitHub Pagesで開いたときは fetch でGASを呼び出す
+function call(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    return new Promise(function (resolve, reject) {
+      var r = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      r[fn].apply(r, args);
+    });
+  }
+  return fetch(APP_URL, {
+    method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: fn, args: args })
+  }).then(function (res) {
+    if (!res.ok) throw new Error('通信エラー（' + res.status + '）');
+    return res.json();
+  }).then(function (d) {
+    if (!d.ok) throw new Error(d.error || 'エラーが発生しました');
+    return d.result;
+  }, function (e) {
+    throw new Error(e && e.message && e.message.indexOf('通信') === 0 ? e.message : (e && e.message) || '通信できませんでした。電波の状態を確認してください');
+  });
+}
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+// 日付
+function mondayOf(d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+function fmt(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function parse(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +(p[2] || 1)); }
+function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function md(d) { return (d.getMonth() + 1) + '/' + d.getDate(); }
+function today() { return fmt(new Date()); }
+function monthOf(dateStr) { return dateStr.slice(0, 7); }
+function addMonth(m, n) { var d = parse(m + '-01'); d.setMonth(d.getMonth() + n); return fmt(d).slice(0, 7); }
+function monthLabel(m) { return m.slice(0, 4) + '年' + Number(m.slice(5, 7)) + '月'; }
+function weekLabel(w) { var d = parse(w); return md(d) + '〜' + md(addDays(d, 6)); }
+function monthDates(m) { var d = parse(m + '-01'), out = []; while (fmt(d).slice(0, 7) === m) { out.push(fmt(d)); d = addDays(d, 1); } return out; }
+
+var statusTimer;
+function status(msg, isErr) {
+  var s = document.getElementById('status');
+  s.textContent = msg; s.className = 'status show' + (isErr ? ' err' : '');
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(function () { s.className = 'status'; }, isErr ? 4000 : 1500);
+}
+function showError(e) { status('エラー：' + (e && e.message ? e.message : e), true); }
+function celebrate(big) {
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: big ? 160 : 70, spread: big ? 100 : 70, origin: { y: .6 } });
+  if (big) setTimeout(function () { confetti({ particleCount: 100, angle: 60, spread: 60, origin: { x: 0 } }); confetti({ particleCount: 100, angle: 120, spread: 60, origin: { x: 1 } }); }, 400);
+}
+
+// ================= データ =================
+function rk(week, member, no) { return week + '|' + member + '|' + no; }
+function getRec(week, member, no) {
+  var k = rk(week, member, no);
+  if (!S.rec[k]) S.rec[k] = { week: week, member: member, no: no, goal: '', marks: ['', '', '', '', '', '', ''] };
+  return S.rec[k];
+}
+function peekRec(week, member, no) { return S.rec[rk(week, member, no)]; }
+function fk(type, key, name) { return type + '|' + key + '|' + name; }
+function getRefl(type, key, name) { var k = fk(type, key, name); if (!S.refl[k]) S.refl[k] = { good: '', issue: '', ai: null }; return S.refl[k]; }
+function peekRefl(type, key, name) { return S.refl[fk(type, key, name)]; }
+
+// その人のその日の記号一覧（家族目標 No.0 も含む）
+function marksOn(member, dateStr) {
+  var d = parse(dateStr), w = fmt(mondayOf(d)), di = (d.getDay() + 6) % 7, out = [];
+  for (var no = 0; no <= S.goalCount; no++) { var r = peekRec(w, member, no); if (r && r.marks[di]) out.push(r.marks[di]); }
+  return out;
+}
+function stat(list) {
+  var c = { '◎': 0, '△': 0, '✕': 0 }, pts = 0;
+  list.forEach(function (m) { c[m]++; pts += POINT[m]; });
+  return { c: c, n: list.length, rate: list.length ? Math.round(pts / (list.length * 2) * 100) : null };
+}
+function statDates(member, dates) { var all = []; dates.forEach(function (d) { all = all.concat(marksOn(member, d)); }); return stat(all); }
+function weekDates(w) { var d = parse(w), out = []; for (var i = 0; i < 7; i++) out.push(fmt(addDays(d, i))); return out; }
+function rateText(r) { return r === null ? '−' : r + '%'; }
+function goalLabel(w, member, no) { return no === 0 ? '👨‍👩‍👦 ' + (S.fam[w] || 'みんなの目標') : (peekRec(w, member, no) || {}).goal || ''; }
+
+function dayDone(member, dateStr) { var s = stat(marksOn(member, dateStr)); return s.n > 0 && s.c['◎'] * 2 >= s.n; }
+function firstDate() {
+  var min = null;
+  Object.keys(S.rec).forEach(function (k) { var w = S.rec[k].week; if (!min || w < min) min = w; });
+  return min;
+}
+function streakInfo(member, untilDate) {
+  var start = firstDate(); if (!start) return { cur: 0, best: 0 };
+  var end = untilDate || today(), d = parse(start), run = 0, best = 0, runs = {};
+  while (fmt(d) <= end) { var s = fmt(d); if (dayDone(member, s)) { run++; if (run > best) best = run; } else run = 0; runs[s] = run; d = addDays(d, 1); }
+  var cur = runs[end] || 0;
+  if (!cur && !untilDate && marksOn(member, end).length === 0) cur = runs[fmt(addDays(parse(end), -1))] || 0; // 今日が未入力なら昨日まで
+  return { cur: cur, best: best };
+}
+function bestStreakIn(member, dates) { var run = 0, best = 0; dates.forEach(function (d) { if (dayDone(member, d)) { run++; best = Math.max(best, run); } else run = 0; }); return best; }
+
+function currentReward() { var r = S.rewards[S.rewards.length - 1]; return r && !r.done ? r : null; }
+function pointsSince(start, member) {
+  var total = 0;
+  Object.keys(S.rec).forEach(function (k) {
+    var r = S.rec[k];
+    if (member && r.member !== member) return;
+    r.marks.forEach(function (m, i) { if (m && fmt(addDays(parse(r.week), i)) >= start) total += REWARD_PT[m]; });
+  });
+  return total;
+}
+
+// ================= 起動 =================
+function start(pin) {
+  call('getAll', pin).then(function (d) {
+    if (d.needPin) {
+      document.getElementById('pinbox').style.display = 'block';
+      document.getElementById('app').style.display = 'none';
+      if (pin) document.getElementById('pinerr').textContent = '合言葉が違います';
+      return;
+    }
+    S.pin = pin; lsSet('kazoku_pin', pin);
+    S.members = d.members; S.goalCount = d.goalCount; S.days = d.days; S.stampList = d.stampList; S.family = d.family;
+    S.aiEnabled = d.aiEnabled; S.childName = d.childName;
+    S.rec = {}; d.records.forEach(function (r) { S.rec[rk(r.week, r.member, r.no)] = r; });
+    S.fam = d.famGoals || {};
+    S.refl = {}; d.reflections.forEach(function (r) { S.refl[fk(r.type, r.key, r.name)] = r; });
+    S.stamps = d.stamps; S.rewards = d.rewards;
+    S.me = S.members.indexOf(lsGet('kazoku_me')) >= 0 ? lsGet('kazoku_me') : '';
+    var saved = lsGet('kazoku_tab');
+    S.member = S.members.indexOf(saved) >= 0 ? saved : (S.me || S.members[0]);
+    if (!S.week) S.week = fmt(mondayOf(new Date()));
+    if (!S.month) S.month = monthOf(today());
+    document.getElementById('pinbox').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderBottom();
+    render();
+    if (!S.me) askMe();
+  }).catch(function (e) { document.getElementById('main').textContent = 'エラー：' + e.message; document.getElementById('app').style.display = 'block'; });
+}
+document.getElementById('pinok').onclick = function () { start(document.getElementById('pin').value.trim()); };
+document.getElementById('pin').onkeydown = function (e) { if (e.key === 'Enter') document.getElementById('pinok').click(); };
+
+function askMe() {
+  var m = el('div', 'modal'), box = el('div', 'box');
+  box.appendChild(el('p', null, 'この端末を使うのはだれ？'));
+  box.appendChild(el('div', 'hint', '応援スタンプの送り主になります'));
+  S.members.forEach(function (name) {
+    var b = el('button', 'btn primary', name);
+    b.onclick = function () { S.me = name; lsSet('kazoku_me', name); S.member = name; lsSet('kazoku_tab', name); document.body.removeChild(m); render(); };
+    box.appendChild(b);
+  });
+  m.appendChild(box); document.body.appendChild(m);
+}
+
+function renderBottom() {
+  var nav = document.getElementById('bottom'); nav.innerHTML = '';
+  SCREENS.forEach(function (s) {
+    var b = el('button', s.id === S.screen ? 'active' : '');
+    b.appendChild(el('span', 'i', s.i)); b.appendChild(document.createTextNode(s.t));
+    b.onclick = function () { flushTexts(); S.screen = s.id; renderBottom(); render(); window.scrollTo(0, 0); };
+    nav.appendChild(b);
+  });
+}
+function go(screen) { flushTexts(); S.screen = screen; renderBottom(); render(); window.scrollTo(0, 0); }
+
+function render() {
+  S.charts.forEach(function (c) { try { c.destroy(); } catch (e) {} }); S.charts = [];
+  ({ rec: renderRec, week: renderWeek, month: renderMonth, archive: renderArchive, reward: renderReward })[S.screen]();
+}
+
+// ヘッダー（週／月ナビ）
+function header(kind, title, withTabs) {
+  var h = document.getElementById('header'); h.innerHTML = '';
+  var me = el('button', 'me', '👤 ' + (S.me || '未設定')); me.onclick = askMe; h.appendChild(me);
+  if (kind) {
+    var row = el('div', 'hrow');
+    var prev = el('button', 'navbtn', '◀'), next = el('button', 'navbtn', '▶');
+    var mid = el('div'); mid.appendChild(el('div', 'htitle', title));
+    var sub = el('div', 'hsub'), back = el('button', null, kind === 'week' ? '今週へ' : '今月へ'); sub.appendChild(back); mid.appendChild(sub);
+    prev.onclick = function () { shift(kind, -1); }; next.onclick = function () { shift(kind, 1); };
+    back.onclick = function () { flushTexts(); if (kind === 'week') S.week = fmt(mondayOf(new Date())); else S.month = monthOf(today()); render(); };
+    row.appendChild(prev); row.appendChild(mid); row.appendChild(next); h.appendChild(row);
+  } else {
+    h.appendChild(el('div', 'htitle', title));
+  }
+  if (withTabs) {
+    var tabs = el('div', 'tabs');
+    S.members.forEach(function (m) {
+      var b = el('button', m === S.member ? 'active' : '', m);
+      b.onclick = function () { flushTexts(); S.member = m; lsSet('kazoku_tab', m); render(); };
+      tabs.appendChild(b);
+    });
+    h.appendChild(tabs);
+  }
+}
+function shift(kind, n) { flushTexts(); if (kind === 'week') S.week = fmt(addDays(parse(S.week), 7 * n)); else S.month = addMonth(S.month, n); render(); }
+
+// ================= ✏️ きろく =================
+function renderRec() {
+  var w = S.week, m = S.member, ws = parse(w);
+  header('week', weekLabel(w) + '（月〜日）', true);
+  var main = document.getElementById('main'); main.innerHTML = '';
+
+  // 連続記録・ポイント
+  var st = streakInfo(m), info = el('div', 'row');
+  if (st.cur > 0) info.appendChild(el('span', 'pill fire', '🔥 ' + st.cur + '日れんぞく◎'));
+  BADGES.forEach(function (b) { if (st.best >= b.days) info.appendChild(el('span', 'pill', b.e)); });
+  var rw = currentReward();
+  if (rw) info.appendChild(el('span', 'pill', '⭐ ' + pointsSince(rw.start) + ' / ' + rw.points + 'pt'));
+  if (info.childNodes.length) main.appendChild(info);
+  main.appendChild(el('div', 'hint', 'マスをタップ：◎ → △ → ✕ → 空欄。自動で保存されます。'));
+
+  // 家族の目標
+  var fc = el('div', 'card fam');
+  fc.appendChild(el('h3', null, '👨‍👩‍👦 みんなの目標'));
+  var fi = textInput('goal', S.fam[w] || '', 'みんなで取り組む目標（1つ）', function (v) { S.fam[w] = v; }, function (v) { return call('saveFamilyGoal', S.pin, w, v); }, 'fam|' + w);
+  fc.appendChild(fi);
+  fc.appendChild(dayCells(w, m, 0, ws));
+  main.appendChild(fc);
+
+  for (var no = 1; no <= S.goalCount; no++) {
+    (function (no) {
+      var g = peekRec(w, m, no) || getRec(w, m, no);
+      var card = el('div', 'card');
+      card.appendChild(textInput('goal', g.goal, '目標' + no + 'を入力', function (v) { getRec(w, m, no).goal = v; }, function (v) { return call('saveGoal', S.pin, w, m, no, v); }, rk(w, m, no)));
+      card.appendChild(dayCells(w, m, no, ws));
+      main.appendChild(card);
+    })(no);
+  }
+
+  // 今週の集計
+  var s = statDates(m, weekDates(w)), sum = el('div', 'card');
+  sum.innerHTML = '<div class="row"><span>今週の達成率</span><span class="rate">' + rateText(s.rate) + '</span><span>◎ ' + s.c['◎'] + '　△ ' + s.c['△'] + '　✕ ' + s.c['✕'] + '</span></div>';
+  main.appendChild(sum);
+
+  // 応援スタンプ
+  main.appendChild(stampCard(w, m));
+
+  // ボタン類
+  var btns = el('div', 'row');
+  var copy = el('button', 'btn', '📋 先週の目標をコピー');
+  copy.onclick = function () { copyLastWeek(w, m); };
+  btns.appendChild(copy);
+  if (S.aiEnabled) {
+    var sg = el('button', 'btn ai', '🤖 目標のアイディアをもらう');
+    sg.onclick = function () { suggestGoals(w, m); };
+    btns.appendChild(sg);
+  }
+  main.appendChild(btns);
+  main.appendChild(el('div', null)).id = 'suggest';
+}
+
+function dayCells(w, m, no, ws) {
+  var days = el('div', 'days'), t = today();
+  S.days.forEach(function (dname, d) {
+    var date = addDays(ws, d);
+    var wrap = el('div', 'day' + (fmt(date) === t ? ' today' : '') + (d === 5 ? ' sat' : d === 6 ? ' sun' : ''));
+    wrap.appendChild(el('div', 'dl', dname + ' ' + date.getDate()));
+    var cur = (peekRec(w, m, no) || { marks: [] }).marks[d] || '';
+    var btn = el('button', 'cell m' + MARKS.indexOf(cur), cur);
+    btn.onclick = function () {
+      var r = getRec(w, m, no), prev = r.marks[d], next = MARKS[(MARKS.indexOf(prev) + 1) % MARKS.length];
+      r.marks[d] = next; btn.textContent = next; btn.className = 'cell m' + MARKS.indexOf(next);
+      status('保存中…');
+      call('saveMark', S.pin, w, m, no, d, next).then(function () {
+        status('保存しました');
+        if (next === '◎') checkAllDone(m, fmt(date));
+      }).catch(function (e) { r.marks[d] = prev; if (S.screen === 'rec') render(); showError(e); });
+      if (S.screen === 'rec') refreshSummary(w, m);
+    };
+    wrap.appendChild(btn); days.appendChild(wrap);
+  });
+  return days;
+}
+function refreshSummary(w, m) {
+  var s = statDates(m, weekDates(w));
+  var r = document.querySelector('.rate'); if (r) r.textContent = rateText(s.rate);
+}
+// その日の目標がぜんぶ◎になったらお祝い
+function checkAllDone(m, dateStr) {
+  var w = fmt(mondayOf(parse(dateStr))), di = (parse(dateStr).getDay() + 6) % 7, total = 0, ok = 0;
+  for (var no = 0; no <= S.goalCount; no++) {
+    var has = no === 0 ? !!S.fam[w] : !!((peekRec(w, m, no) || {}).goal);
+    if (!has) continue;
+    total++; if (((peekRec(w, m, no) || { marks: [] }).marks[di]) === '◎') ok++;
+  }
+  if (total > 0 && ok === total) { celebrate(true); status('🎉 ' + m + '、今日はぜんぶ◎！すごい！'); }
+}
+
+function stampCard(w, m) {
+  var card = el('div', 'card');
+  card.appendChild(el('h3', null, '💌 応援スタンプ'));
+  var got = S.stamps.filter(function (s) { return s.week === w && s.to === m; });
+  var byStamp = {};
+  got.forEach(function (s) { (byStamp[s.stamp] = byStamp[s.stamp] || []).push(s.from); });
+  var recv = el('div', 'row');
+  if (!got.length) recv.appendChild(el('span', 'hint', 'まだ応援はありません'));
+  Object.keys(byStamp).forEach(function (st) { recv.appendChild(el('span', 'pill', st + ' ×' + byStamp[st].length + '（' + byStamp[st].join('・') + '）')); });
+  card.appendChild(recv);
+  if (S.me && S.me !== m) {
+    card.appendChild(el('div', 'hint', S.me + 'から ' + m + ' に応援を送る'));
+    var row = el('div', 'row stamps');
+    S.stampList.forEach(function (st) {
+      var on = S.stamps.some(function (s) { return s.week === w && s.to === m && s.from === S.me && s.stamp === st; });
+      var b = el('button', on ? 'on' : '', st);
+      b.onclick = function () {
+        b.disabled = true;
+        call('toggleStamp', S.pin, w, m, S.me, st).then(function (isOn) {
+          S.stamps = S.stamps.filter(function (s) { return !(s.week === w && s.to === m && s.from === S.me && s.stamp === st); });
+          if (isOn) { S.stamps.push({ week: w, to: m, from: S.me, stamp: st }); celebrate(false); }
+          render();
+        }).catch(function (e) { b.disabled = false; showError(e); });
+      };
+      row.appendChild(b);
+    });
+    card.appendChild(row);
+  } else if (S.me === m) {
+    card.appendChild(el('div', 'hint', '家族のタブを開くと、応援スタンプを送れます'));
+  }
+  return card;
+}
+
+function copyLastWeek(w, m) {
+  flushTexts();
+  var from = fmt(addDays(parse(w), -7)), jobs = [];
+  for (var no = 1; no <= S.goalCount; no++) {
+    var src = peekRec(from, m, no), dst = getRec(w, m, no);
+    if (src && src.goal && !dst.goal) { dst.goal = src.goal; jobs.push(call('saveGoal', S.pin, w, m, no, src.goal)); }
+  }
+  if (S.fam[from] && !S.fam[w]) { S.fam[w] = S.fam[from]; jobs.push(call('saveFamilyGoal', S.pin, w, S.fam[w])); }
+  if (!jobs.length) { status('コピーする目標がありません'); return; }
+  status('コピー中…');
+  Promise.all(jobs).then(function () { status(jobs.length + '件コピーしました'); }).catch(showError);
+  render();
+}
+
+function suggestGoals(w, m) {
+  var box = document.getElementById('suggest');
+  box.innerHTML = '<div class="card"><div class="loading">🤖 考え中…</div></div>';
+  call('aiSuggest', S.pin, m, buildMemberHistory(m, w)).then(function (list) {
+    box.innerHTML = '';
+    var card = el('div', 'card');
+    card.appendChild(el('h3', null, '🤖 目標のアイディア'));
+    card.appendChild(el('div', 'hint', 'タップすると、空いている目標の欄に入ります'));
+    list.forEach(function (s, i) {
+      var d = el('div', 'sugg'); d.style.animation = 'fadeUp .5s ' + (i * 0.15) + 's both';
+      d.innerHTML = '<b>' + esc(s.goal) + '</b><div class="hint" style="margin:2px 0 0">' + esc(s.reason || '') + '</div>';
+      d.onclick = function () {
+        for (var no = 1; no <= S.goalCount; no++) {
+          var r = getRec(w, m, no);
+          if (!r.goal) { r.goal = s.goal; call('saveGoal', S.pin, w, m, no, s.goal).then(function () { status('目標に入れました'); }).catch(showError); render(); return; }
+        }
+        status('空いている欄がありません。どれかを消してから選んでね');
+      };
+      card.appendChild(d);
+    });
+    box.appendChild(card);
+  }).catch(function (e) { box.innerHTML = ''; showError(e); });
+}
+
+// 文字入力（自動保存）
+var textTimers = {}, textSaved = {}, textInputs = {};
+function textInput(kind, value, ph, onLocal, saver, key) {
+  var inp = kind === 'area' ? el('textarea') : el('input', 'goal');
+  inp.value = value; inp.placeholder = ph; inp.maxLength = kind === 'area' ? 500 : 100;
+  textSaved[key] = value;
+  textInputs[key] = { inp: inp, saver: saver };
+  inp.oninput = function () { onLocal(inp.value); clearTimeout(textTimers[key]); textTimers[key] = setTimeout(function () { saveText(key); }, 900); };
+  inp.onblur = function () { saveText(key); };
+  return inp;
+}
+function saveText(key) {
+  var t = textInputs[key]; if (!t) return;
+  clearTimeout(textTimers[key]); delete textTimers[key];
+  var v = t.inp.value;
+  if (textSaved[key] === v) return;
+  textSaved[key] = v;
+  status('保存中…');
+  t.saver(v).then(function () { status('保存しました'); }).catch(function (e) { delete textSaved[key]; showError(e); });
+}
+function flushTexts() { Object.keys(textTimers).forEach(saveText); }
+
+// ================= 📊 週ふりかえり =================
+function renderWeek() {
+  var w = S.week, dates = weekDates(w);
+  header('week', '📊 ' + weekLabel(w) + ' のふりかえり', false);
+  var main = document.getElementById('main'); main.innerHTML = '';
+
+  // 全体
+  var allMarks = []; S.members.forEach(function (m) { dates.forEach(function (d) { allMarks = allMarks.concat(marksOn(m, d)); }); });
+  var fs = stat(allMarks);
+  var top = el('div', 'card');
+  top.innerHTML = '<h3>👨‍👩‍👦 家族みんなの達成率</h3><div class="rate" style="text-align:center;font-size:42px">' + rateText(fs.rate) + '</div>' +
+    '<div style="text-align:center">◎ ' + fs.c['◎'] + '　△ ' + fs.c['△'] + '　✕ ' + fs.c['✕'] + '</div>';
+  if (S.fam[w]) top.appendChild(el('div', 'hint', 'みんなの目標：' + S.fam[w]));
+  main.appendChild(top);
+
+  // 人別グラフ（前週と比較）
+  var prevDates = weekDates(fmt(addDays(parse(w), -7)));
+  var c1 = el('div', 'card'); c1.appendChild(el('h3', null, '🙋 ひとりずつの達成率'));
+  var cv1 = chartCanvas(c1, 200); main.appendChild(c1);
+  chart(cv1, 'bar', S.members, [
+    { label: '先週', data: S.members.map(function (m) { return statDates(m, prevDates).rate || 0; }), backgroundColor: '#cfe3db' },
+    { label: '今週', data: S.members.map(function (m) { return statDates(m, dates).rate || 0; }), backgroundColor: '#2f6f5e' }
+  ], true);
+
+  // 曜日別グラフ
+  var c2 = el('div', 'card'); c2.appendChild(el('h3', null, '📅 曜日ごとの調子'));
+  var cv2 = chartCanvas(c2, 180); main.appendChild(c2);
+  chart(cv2, 'line', S.days, S.members.map(function (m, i) {
+    return { label: m, data: dates.map(function (d) { return stat(marksOn(m, d)).rate; }), borderColor: ['#2f6f5e', '#e07a5f', '#7b5cff'][i % 3], backgroundColor: 'transparent', tension: .3, spanGaps: true };
+  }), true);
+
+  // 人ごと：目標別バー・連続・コメント
+  S.members.concat([S.family]).forEach(function (m) {
+    var card = el('div', 'card');
+    if (m === S.family) {
+      card.className = 'card fam';
+      card.appendChild(el('h3', null, '👨‍👩‍👦 家族としてのふりかえり'));
+    } else {
+      var s = statDates(m, dates), st = streakInfo(m, dates[6] < today() ? dates[6] : null);
+      card.appendChild(el('h3', null, m + '　' + rateText(s.rate)));
+      for (var no = 0; no <= S.goalCount; no++) {
+        var label = goalLabel(w, m, no), r = peekRec(w, m, no);
+        if (!label || !r) continue;
+        var gs = stat(r.marks.filter(function (x) { return x; }));
+        if (!gs.n && no === 0) continue;
+        var lb = el('div', 'barlabel'); lb.appendChild(el('span', null, label)); lb.appendChild(el('span', null, r.marks.map(function (x) { return x || '・'; }).join('')));
+        card.appendChild(lb);
+        var bar = el('div', 'bar'), fill = el('div'); bar.appendChild(fill); card.appendChild(bar);
+        animateWidth(fill, gs.rate || 0);
+      }
+      var pills = el('div', 'row');
+      pills.appendChild(el('span', 'pill fire', '🔥 最高 ' + st.best + '日れんぞく'));
+      var cheers = S.stamps.filter(function (x) { return x.week === w && x.to === m; }).map(function (x) { return x.stamp; }).join('');
+      if (cheers) pills.appendChild(el('span', 'pill', '💌 ' + cheers));
+      card.appendChild(pills);
+    }
+    card.appendChild(reflInputs('week', w, m));
+    main.appendChild(card);
+  });
+
+  main.appendChild(aiSection('week', w));
+  var nx = el('button', 'btn primary big', '➡️ 次の週の目標を決める');
+  nx.onclick = function () { flushTexts(); S.week = fmt(addDays(parse(w), 7)); go('rec'); };
+  main.appendChild(nx);
+}
+
+function reflInputs(type, key, name) {
+  var wrap = el('div'), r = peekRefl(type, key, name) || { good: '', issue: '' };
+  wrap.appendChild(el('div', 'hint', '😊 よかったこと・がんばったこと'));
+  wrap.appendChild(textInput('area', r.good || '', '例：毎日早起きできた', function (v) { getRefl(type, key, name).good = v; }, function (v) { return call('saveReflection', S.pin, type, key, name, 'good', v); }, fk(type, key, name) + '|good'));
+  wrap.appendChild(el('div', 'hint', '🤔 課題・次はこうしたい'));
+  wrap.appendChild(textInput('area', r.issue || '', '例：土日にくずれやすい', function (v) { getRefl(type, key, name).issue = v; }, function (v) { return call('saveReflection', S.pin, type, key, name, 'issue', v); }, fk(type, key, name) + '|issue'));
+  return wrap;
+}
+function animateWidth(fill, pct) { setTimeout(function () { fill.style.width = pct + '%'; }, 50); }
+function chartCanvas(card, h) {
+  var box = el('div'); box.style.position = 'relative'; box.style.height = h + 'px';
+  var cv = el('canvas'); box.appendChild(cv); card.appendChild(box); return cv;
+}
+function chart(canvas, type, labels, datasets, pct) {
+  if (typeof Chart === 'undefined') { canvas.parentNode.appendChild(el('div', 'hint', '（グラフを読み込めませんでした）')); return; }
+  S.charts.push(new Chart(canvas, {
+    type: type, data: { labels: labels, datasets: datasets },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 1200 },
+      scales: { y: pct ? { min: 0, max: 100, ticks: { callback: function (v) { return v + '%'; } } } : {} },
+      plugins: { legend: { position: 'bottom' } } }
+  }));
+}
+
+// ================= 🤖 AI評価 =================
+function aiSection(type, key) {
+  var wrap = el('div'); wrap.id = 'ai-area';
+  var famAi = (peekRefl(type, key, S.family) || {}).ai;
+  if (famAi) {
+    wrap.appendChild(renderAI(type, key, false));
+    if (S.aiEnabled) { var again = el('button', 'btn', '🔄 もう一度AIに評価してもらう'); again.style.marginBottom = '12px'; again.onclick = function () { if (confirm('今のAI評価を上書きします。よろしいですか？')) runAI(type, key); }; wrap.appendChild(again); }
+  } else if (S.aiEnabled) {
+    var b = el('button', 'btn ai big', '🤖 AIにひょうかしてもらう！');
+    b.style.marginBottom = '12px';
+    b.onclick = function () { runAI(type, key); };
+    wrap.appendChild(b);
+    wrap.appendChild(el('div', 'hint', 'コメントを書き終わってから押すと、コメントも読んで評価してくれます'));
+  } else {
+    wrap.appendChild(el('div', 'hint', 'AI評価を使うには、APIキーの設定が必要です'));
+  }
+  return wrap;
+}
+function runAI(type, key) {
+  flushTexts();
+  var ov = el('div', 'thinking');
+  ov.innerHTML = '<div class="robot">🤖</div><div>ほめほめAIが記録を読んでいます</div><div class="dots"><span>●</span><span>●</span><span>●</span></div>';
+  document.body.appendChild(ov);
+  var summary = type === 'week' ? buildWeekSummary(key) : buildMonthSummary(key);
+  call('aiEvaluate', S.pin, type, key, summary).then(function (res) {
+    document.body.removeChild(ov);
+    S.members.forEach(function (m) { getRefl(type, key, m).ai = res.members[m] || {}; });
+    getRefl(type, key, S.family).ai = res.family;
+    var area = document.getElementById('ai-area');
+    area.innerHTML = ''; area.appendChild(renderAI(type, key, true));
+    area.scrollIntoView({ behavior: 'smooth' });
+    celebrate(true);
+  }).catch(function (e) { if (ov.parentNode) document.body.removeChild(ov); showError(e); });
+}
+function renderAI(type, key, animate) {
+  var wrap = el('div');
+  var fam = (peekRefl(type, key, S.family) || {}).ai || {};
+  var fc = el('div', 'ai-card ai-fam');
+  fc.innerHTML = '<div class="hint" style="text-align:center">🤖 ほめほめAIより</div><div class="catch">' + esc(fam.title || '') + '</div><p>' + esc(fam.comment || '') + '</p>';
+  wrap.appendChild(fc);
+  S.members.forEach(function (m, i) {
+    var a = (peekRefl(type, key, m) || {}).ai || {};
+    var c = el('div', 'ai-card');
+    c.style.animationDelay = animate ? (0.4 + i * 0.5) + 's' : '0s';
+    c.innerHTML = '<div><span class="stamp" style="animation-delay:' + (animate ? (0.6 + i * 0.5) : 0) + 's">' + esc(a.stamp || '🌟') + '</span>' +
+      '<span class="who">' + esc(m) + '</span><span class="ttl">' + esc(a.title || '') + '</span></div>' +
+      '<p>' + esc(a.comment || '') + '</p>' +
+      (a.best ? '<div class="sub">🌟 ' + esc(a.best) + '</div>' : '') +
+      (a.next ? '<div class="sub">👣 つぎの一歩：' + esc(a.next) + '</div>' : '');
+    wrap.appendChild(c);
+  });
+  return wrap;
+}
+
+// AIに渡すまとめ文
+function goalLines(w, m, dates) {
+  var lines = [];
+  for (var no = 0; no <= S.goalCount; no++) {
+    var label = goalLabel(w, m, no), r = peekRec(w, m, no);
+    if (!label || !r) continue;
+    var seq = S.days.map(function (d, i) { return dates && dates.indexOf(fmt(addDays(parse(w), i))) < 0 ? '' : d + (r.marks[i] || '−'); }).filter(function (x) { return x; }).join(' ');
+    lines.push('  ・' + label + '：' + seq);
+  }
+  return lines;
+}
+function reflLines(type, key, name) {
+  var r = peekRefl(type, key, name) || {};
+  var out = [];
+  if (r.good) out.push('  家族が書いた「よかったこと」：' + r.good);
+  if (r.issue) out.push('  家族が書いた「課題」：' + r.issue);
+  return out;
+}
+function buildWeekSummary(w) {
+  var dates = weekDates(w), prev = weekDates(fmt(addDays(parse(w), -7)));
+  var out = ['【期間】' + w + ' から1週間（記号：◎できた △少しできた ✕できなかった −未記入）'];
+  if (S.fam[w]) out.push('【みんなの目標】' + S.fam[w]);
+  S.members.forEach(function (m) {
+    var s = statDates(m, dates), p = statDates(m, prev), st = streakInfo(m, dates[6] < today() ? dates[6] : null);
+    out.push('■' + m + '：達成率 ' + rateText(s.rate) + '（◎' + s.c['◎'] + ' △' + s.c['△'] + ' ✕' + s.c['✕'] + '）先週 ' + rateText(p.rate) + '／◎の連続 最高' + st.best + '日');
+    out = out.concat(goalLines(w, m, null), reflLines('week', w, m));
+    var cheers = S.stamps.filter(function (x) { return x.week === w && x.to === m; }).map(function (x) { return x.from + x.stamp; });
+    if (cheers.length) out.push('  もらった応援スタンプ：' + cheers.join(' '));
+  });
+  out = out.concat(reflLines('week', w, S.family).map(function (x) { return x.replace('  ', '■家族全体 '); }));
+  return out.join('\n');
+}
+function weeksOfMonth(m) {
+  var dates = monthDates(m), set = [];
+  dates.forEach(function (d) { var w = fmt(mondayOf(parse(d))); if (set.indexOf(w) < 0) set.push(w); });
+  return set;
+}
+function goalStatsMonth(member, m) {
+  var dates = monthDates(m), map = {};
+  weeksOfMonth(m).forEach(function (w) {
+    for (var no = 0; no <= S.goalCount; no++) {
+      var label = goalLabel(w, member, no), r = peekRec(w, member, no);
+      if (!label || !r) continue;
+      r.marks.forEach(function (x, i) { if (x && dates.indexOf(fmt(addDays(parse(w), i))) >= 0) { (map[label] = map[label] || []).push(x); } });
+    }
+  });
+  return Object.keys(map).map(function (g) { var s = stat(map[g]); return { goal: g, rate: s.rate, n: s.n, c: s.c }; }).sort(function (a, b) { return b.rate - a.rate; });
+}
+function monthAwards(m) {
+  var dates = monthDates(m), prev = monthDates(addMonth(m, -1)), aw = [];
+  var rates = S.members.map(function (x) { return { m: x, s: statDates(x, dates), p: statDates(x, prev), streak: bestStreakIn(x, dates) }; });
+  var mvp = rates.filter(function (r) { return r.s.n >= 5; }).sort(function (a, b) { return b.s.rate - a.s.rate; })[0];
+  if (mvp) aw.push({ ic: '🏆', name: '月間MVP', who: mvp.m, why: '達成率 ' + mvp.s.rate + '%' });
+  var up = rates.filter(function (r) { return r.s.n >= 5 && r.p.n >= 5 && r.s.rate > r.p.rate; }).sort(function (a, b) { return (b.s.rate - b.p.rate) - (a.s.rate - a.p.rate); })[0];
+  if (up) aw.push({ ic: '📈', name: 'のびたで賞', who: up.m, why: '先月より +' + (up.s.rate - up.p.rate) + 'ポイント' });
+  var sk = rates.slice().sort(function (a, b) { return b.streak - a.streak; })[0];
+  if (sk && sk.streak >= 2) aw.push({ ic: '🔥', name: 'れんぞく賞', who: sk.m, why: '◎ ' + sk.streak + '日れんぞく' });
+  var many = rates.slice().sort(function (a, b) { return b.s.c['◎'] - a.s.c['◎']; })[0];
+  if (many && many.s.c['◎'] > 0) aw.push({ ic: '💮', name: '◎いっぱい賞', who: many.m, why: '◎ ' + many.s.c['◎'] + 'こ' });
+  return aw;
+}
+function buildMonthSummary(m) {
+  var dates = monthDates(m), prev = monthDates(addMonth(m, -1));
+  var out = ['【期間】' + monthLabel(m) + '（記号：◎できた △少しできた ✕できなかった）'];
+  S.members.forEach(function (x) {
+    var s = statDates(x, dates), p = statDates(x, prev);
+    out.push('■' + x + '：達成率 ' + rateText(s.rate) + '（◎' + s.c['◎'] + ' △' + s.c['△'] + ' ✕' + s.c['✕'] + '）先月 ' + rateText(p.rate) + '／この月の◎連続 最高' + bestStreakIn(x, dates) + '日');
+    out.push('  週ごとの達成率：' + weeksOfMonth(m).map(function (w) { return weekLabel(w) + ' ' + rateText(statDates(x, weekDates(w).filter(function (d) { return dates.indexOf(d) >= 0; })).rate); }).join('、'));
+    goalStatsMonth(x, m).forEach(function (g) { out.push('  ・' + g.goal + '：' + g.rate + '%（◎' + g.c['◎'] + ' △' + g.c['△'] + ' ✕' + g.c['✕'] + '）'); });
+    out = out.concat(reflLines('month', m, x));
+  });
+  var aw = monthAwards(m);
+  if (aw.length) out.push('【アプリが決めた表彰】' + aw.map(function (a) { return a.name + '：' + a.who + '（' + a.why + '）'; }).join('、'));
+  out = out.concat(reflLines('month', m, S.family).map(function (x) { return x.replace('  ', '■家族全体 '); }));
+  return out.join('\n');
+}
+function buildMemberHistory(member, w) {
+  var out = [];
+  [-14, -7, 0].forEach(function (off) {
+    var wk = fmt(addDays(parse(w), off));
+    var s = statDates(member, weekDates(wk));
+    out.push('【' + weekLabel(wk) + '】達成率 ' + rateText(s.rate));
+    out = out.concat(goalLines(wk, member, null));
+  });
+  return out.join('\n');
+}
+
+// ================= 🏆 月ふりかえり =================
+function renderMonth() {
+  var m = S.month, dates = monthDates(m);
+  header('month', '🏆 ' + monthLabel(m) + ' のふりかえり', false);
+  var main = document.getElementById('main'); main.innerHTML = '';
+
+  // 表彰
+  var aw = monthAwards(m), ac = el('div', 'card');
+  ac.appendChild(el('h3', null, '🎖️ 今月の表彰'));
+  if (!aw.length) ac.appendChild(el('div', 'hint', 'まだ記録が少ないので、表彰はありません'));
+  aw.forEach(function (a, i) {
+    var row = el('div', 'award'); row.style.animation = 'fadeUp .5s ' + (i * 0.2) + 's both';
+    row.innerHTML = '<span class="ic">' + a.ic + '</span><div><b>' + esc(a.name) + '：' + esc(a.who) + '</b><div class="hint" style="margin:0">' + esc(a.why) + '</div></div>';
+    ac.appendChild(row);
+  });
+  main.appendChild(ac);
+
+  // 人別（先月比較）
+  var prev = monthDates(addMonth(m, -1));
+  var c1 = el('div', 'card'); c1.appendChild(el('h3', null, '🙋 ひとりずつの達成率'));
+  var cv1 = chartCanvas(c1, 200); main.appendChild(c1);
+  chart(cv1, 'bar', S.members, [
+    { label: '先月', data: S.members.map(function (x) { return statDates(x, prev).rate || 0; }), backgroundColor: '#cfe3db' },
+    { label: '今月', data: S.members.map(function (x) { return statDates(x, dates).rate || 0; }), backgroundColor: '#2f6f5e' }
+  ], true);
+
+  // 週ごとの推移
+  var weeks = weeksOfMonth(m);
+  var c2 = el('div', 'card'); c2.appendChild(el('h3', null, '📈 週ごとの推移'));
+  var cv2 = chartCanvas(c2, 200); main.appendChild(c2);
+  chart(cv2, 'line', weeks.map(function (w) { return md(parse(w)) + '〜'; }), S.members.map(function (x, i) {
+    return { label: x, data: weeks.map(function (w) { return statDates(x, weekDates(w).filter(function (d) { return dates.indexOf(d) >= 0; })).rate; }), borderColor: ['#2f6f5e', '#e07a5f', '#7b5cff'][i % 3], backgroundColor: 'transparent', tension: .3, spanGaps: true };
+  }), true);
+
+  // 人ごと
+  S.members.concat([S.family]).forEach(function (x) {
+    var card = el('div', 'card');
+    if (x === S.family) { card.className = 'card fam'; card.appendChild(el('h3', null, '👨‍👩‍👦 家族としてのふりかえり')); }
+    else {
+      var s = statDates(x, dates);
+      card.appendChild(el('h3', null, x + '　' + rateText(s.rate) + '（◎' + s.c['◎'] + ' △' + s.c['△'] + ' ✕' + s.c['✕'] + '）'));
+      var gl = goalStatsMonth(x, m);
+      if (!gl.length) card.appendChild(el('div', 'hint', 'この月の記録はありません'));
+      gl.forEach(function (g, i) {
+        var lb = el('div', 'barlabel'); lb.appendChild(el('span', null, (i === 0 && g.n >= 3 ? '👑 ' : '') + g.goal)); lb.appendChild(el('span', null, g.rate + '%'));
+        card.appendChild(lb);
+        var bar = el('div', 'bar'), fill = el('div'); bar.appendChild(fill); card.appendChild(bar); animateWidth(fill, g.rate);
+      });
+      card.appendChild(el('span', 'pill fire', '🔥 この月の最高 ' + bestStreakIn(x, dates) + '日れんぞく'));
+    }
+    card.appendChild(reflInputs('month', m, x));
+    main.appendChild(card);
+  });
+  main.appendChild(aiSection('month', m));
+}
+
+// ================= 📚 アーカイブ =================
+function renderArchive() {
+  header(null, '📚 ふりかえりアーカイブ', false);
+  var main = document.getElementById('main'); main.innerHTML = '';
+  var items = {};
+  Object.keys(S.refl).forEach(function (k) {
+    var r = S.refl[k], p = k.split('|');
+    if (r.good || r.issue || r.ai) { items[p[0] + '|' + p[1]] = items[p[0] + '|' + p[1]] || { type: p[0], key: p[1], ai: false }; if (r.ai) items[p[0] + '|' + p[1]].ai = true; }
+  });
+  // 記録がある週も一覧に出す
+  Object.keys(S.rec).forEach(function (k) { var w = S.rec[k].week; if (S.rec[k].marks.some(function (x) { return x; })) items['week|' + w] = items['week|' + w] || { type: 'week', key: w, ai: false }; });
+  var list = Object.keys(items).map(function (k) { return items[k]; });
+  var months = list.filter(function (x) { return x.type === 'month'; }).sort(function (a, b) { return a.key < b.key ? 1 : -1; });
+  var weeks = list.filter(function (x) { return x.type === 'week'; }).sort(function (a, b) { return a.key < b.key ? 1 : -1; });
+  [['🏆 月のふりかえり', months], ['📊 週のふりかえり', weeks]].forEach(function (sec) {
+    var card = el('div', 'card'); card.appendChild(el('h3', null, sec[0]));
+    if (!sec[1].length) card.appendChild(el('div', 'hint', 'まだありません'));
+    sec[1].forEach(function (it) {
+      var dates = it.type === 'week' ? weekDates(it.key) : monthDates(it.key);
+      var all = []; S.members.forEach(function (m) { dates.forEach(function (d) { all = all.concat(marksOn(m, d)); }); });
+      var row = el('div', 'list-item');
+      row.innerHTML = '<span>' + (it.type === 'week' ? weekLabel(it.key) : monthLabel(it.key)) + (it.ai ? ' 🤖' : '') + '</span><span class="pill">' + rateText(stat(all).rate) + ' ›</span>';
+      row.onclick = function () { if (it.type === 'week') { S.week = it.key; go('week'); } else { S.month = it.key; go('month'); } };
+      card.appendChild(row);
+    });
+    main.appendChild(card);
+  });
+  main.appendChild(el('div', 'hint', '🤖 はAI評価があるふりかえりです'));
+}
+
+// ================= ⭐ ごほうび・バッジ =================
+function renderReward() {
+  header(null, '⭐ ごほうびとバッジ', false);
+  var main = document.getElementById('main'); main.innerHTML = '';
+  var rw = currentReward(), card = el('div', 'card');
+  card.appendChild(el('h3', null, '🎁 家族のごほうび'));
+  card.appendChild(el('div', 'hint', '家族みんなの◎は10pt、△は5pt。全員のポイントを合わせて貯めます'));
+  if (rw) {
+    var pts = pointsSince(rw.start), pct = Math.min(100, Math.round(pts / rw.points * 100));
+    card.appendChild(el('div', 'rate', rw.name));
+    var pg = el('div', 'progress'), fill = el('div'), lab = el('span', null, pts + ' / ' + rw.points + ' pt（' + pct + '%）');
+    pg.appendChild(fill); pg.appendChild(lab); card.appendChild(pg); animateWidth(fill, pct);
+    var by = el('div', 'row'); by.style.marginTop = '8px';
+    S.members.forEach(function (m) { by.appendChild(el('span', 'pill', m + ' ' + pointsSince(rw.start, m) + 'pt')); });
+    card.appendChild(by);
+    card.appendChild(el('div', 'hint', rw.start + ' から貯めています'));
+    if (pts >= rw.points) {
+      card.appendChild(el('div', 'rate', '🎉 達成！おめでとう！'));
+      setTimeout(function () { celebrate(true); }, 300);
+      var done = el('button', 'btn primary big', '🎁 ごほうびをもらった！（次のごほうびへ）');
+      done.onclick = function () {
+        call('completeReward', S.pin).then(function () { rw.done = today(); status('次のごほうびを決めよう！'); render(); }).catch(showError);
+      };
+      card.appendChild(done);
+    }
+  } else {
+    card.appendChild(el('div', 'hint', 'ごほうびがまだ決まっていません。家族会議で決めよう！'));
+  }
+  // 設定フォーム
+  var f = el('div'); f.style.marginTop = '10px';
+  var nm = el('input', 'goal'); nm.placeholder = 'ごほうび（例：家族で回転寿司）'; nm.value = rw ? rw.name : '';
+  var pt = el('input', 'goal'); pt.type = 'number'; pt.inputMode = 'numeric'; pt.placeholder = '必要ポイント（例：1500）'; pt.value = rw ? rw.points : ''; pt.style.marginTop = '6px';
+  var sv = el('button', 'btn', rw ? 'ごほうびを変更する' : 'ごほうびを決める'); sv.style.marginTop = '6px';
+  sv.onclick = function () {
+    if (!nm.value.trim() || !(Number(pt.value) > 0)) { status('ごほうびと必要ポイントを入れてください', true); return; }
+    call('setReward', S.pin, nm.value.trim(), Number(pt.value)).then(function () {
+      if (rw) { rw.name = nm.value.trim(); rw.points = Number(pt.value); } else S.rewards.push({ start: today(), name: nm.value.trim(), points: Number(pt.value), done: '' });
+      status('保存しました'); render();
+    }).catch(showError);
   };
-  frame.src = APP_URL;
-  // 15秒たっても開かないときは、直接開くリンクを出す
-  setTimeout(function () { fallback.style.display = 'block'; }, 15000);
+  f.appendChild(nm); f.appendChild(pt); f.appendChild(sv);
+  var avg = Math.round(pointsSince(fmt(addDays(new Date(), -7))) || 0);
+  if (avg) f.appendChild(el('div', 'hint', '目安：最近1週間で家族みんなで ' + avg + 'pt 貯まっています'));
+  card.appendChild(f);
+  main.appendChild(card);
+
+  // バッジ
+  S.members.forEach(function (m) {
+    var st = streakInfo(m), bc = el('div', 'card');
+    bc.appendChild(el('h3', null, '🏅 ' + m + 'のバッジ'));
+    bc.appendChild(el('div', 'hint', '1日の目標の半分以上が◎だと「◎の日」。今 ' + st.cur + '日れんぞく／最高 ' + st.best + '日'));
+    var g = el('div', 'badges');
+    BADGES.forEach(function (b) {
+      var got = st.best >= b.days, d = el('div', 'badge' + (got ? ' got' : ''));
+      d.innerHTML = '<span class="e">' + b.e + '</span>' + b.name;
+      if (got) d.style.animation = 'pop .6s';
+      g.appendChild(d);
+    });
+    bc.appendChild(g); main.appendChild(bc);
+  });
+
+  // 履歴
+  var done = S.rewards.filter(function (r) { return r.done; });
+  if (done.length) {
+    var hc = el('div', 'card'); hc.appendChild(el('h3', null, '📜 これまでのごほうび'));
+    done.slice().reverse().forEach(function (r) { hc.appendChild(el('div', 'list-item', '🎁 ' + r.name + '（' + r.done + ' 達成）')); });
+    main.appendChild(hc);
+  }
+}
+
+start(lsGet('kazoku_pin'));
 </script>
 </body>
 </html>
