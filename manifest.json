@@ -1,6 +1,6 @@
 {
-  "name": "かぞくのかんばる",
-  "short_name": "かんばる",
+  "name": "かぞくのがんばる",
+  "short_name": "がんばる",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
